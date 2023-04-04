@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import "./Todo.css";
@@ -7,10 +6,9 @@ import api from "./services/api";
 
 const App = () => {
   const [folders, setFolders] = useState([]);
-  const [todos, setTodos] = useState([
-    { id: 1, content: "Todo 1", completed: false, folderId: 1 },
-  ]);
+  const [todos, setTodos] = useState([]);
   const [selectedFolderId, setSelectedFolderId] = useState();
+
   const [search, setSearch] = useState("");
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -42,15 +40,6 @@ const App = () => {
     setNewTodoFolderId("");
   };
 
-  useEffect(() => {
-    api.searchTodos("").then((response) => {
-      setTodos(response.data);
-    });
-    api.fetchFolders().then((response) => {
-      setFolders(response.data);
-    });
-  }, []);
-
   const handleFolderClick = (folderId) => {
     setSelectedFolderId(folderId);
     api.fetchTodos(folderId).then((response) => {
@@ -70,11 +59,21 @@ const App = () => {
       setTodos(response.data);
     });
   };
+
   const onTodoDelete = (id, data) => {
     api.deleteTodo(id).then((response) => {
       setTodos(response.data);
     });
   };
+  
+  useEffect(() => {
+    api.searchTodos("").then((response) => {
+      setTodos(response.data);
+    });
+    api.fetchFolders().then((response) => {
+      setFolders(response.data);
+    });
+  }, []);
 
   return (
     <div className="App">
@@ -156,17 +155,21 @@ const App = () => {
           )}
 
           {/* Liste des todos */}
-          <ul className="todo-list">
-            {todos.map((todo) => (
-              <Todo
-                key={todo.id}
-                todo={todo}
-                onUpdate={onTodoUpdate}
-                onDelete={onTodoDelete}
-                onComplete={onTodoUpdate}
-              />
-            ))}
-          </ul>
+          {Array.isArray(todos) && todos.length > 0 ? (
+            <ul className="todo-list">
+              {todos.map((todo) => (
+                <Todo
+                  key={todo.id}
+                  todo={todo}
+                  onUpdate={onTodoUpdate}
+                  onDelete={onTodoDelete}
+                  onComplete={onTodoUpdate}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p>Pas de résultats.</p>
+          )}
         </div>
       </div>
     </div>
