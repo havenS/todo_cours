@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import "./Todo.css";
@@ -6,10 +5,8 @@ import Todo from "./Todo";
 import api from "./services/api";
 
 const App = () => {
-  const [folders, setFolders] = useState([{ id: 1, name: "Dossier 1" }]);
-  const [todos, setTodos] = useState([
-    { id: 1, content: "Todo 1", completed: false, folderId: 1 },
-  ]);
+  const [folders, setFolders] = useState([]);
+  const [todos, setTodos] = useState([]);
   const [search, setSearch] = useState("");
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -18,25 +15,7 @@ const App = () => {
   const [newTodoContent, setNewTodoContent] = useState("");
   const [newTodoFolderId, setNewTodoFolderId] = useState("");
 
-  const handleAddFolder = () => {
-    api.createFolder({ name: newFolderName }).then(() => {
-      // Rechargez la liste des dossiers après avoir créé un nouveau dossier
-      api.fetchFolders().then((response) => {
-        setFolders(response.data);
-      });
-    });
-    setNewFolderName("");
-    setShowAddFolderModal(false);
-  };
-
-  const handleAddTodo = () => {
-    setShowAddTodoModal(false);
-    setNewTodoContent("");
-  };
   useEffect(() => {
-    api.searchTodos().then((response) => {
-      setTodos(response.data);
-    });
     api.fetchFolders().then((response) => {
       setFolders(response.data);
     });
@@ -50,21 +29,45 @@ const App = () => {
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
-    api.searchTodos().then((response) => {
-      setTodos(response.data);
-    });
   };
-  
+
+  useEffect(() => {
+    if (search.trim() !== "") {
+      api.searchTodos(search).then((response) => {
+        setTodos(response.data);
+      });
+    } else {
+      api.fetchTodos().then((response) => {
+        setTodos(response.data);
+      });
+    }
+  }, [search]);
+
+  const handleAddFolder = () => {
+    api.createFolder({ name: newFolderName }).then(() => {
+      api.fetchFolders().then((response) => {
+        setFolders(response.data);
+      });
+    });
+    setNewFolderName("");
+    setShowAddFolderModal(false);
+  };
+
+  const handleAddTodo = () => {
+    setShowAddTodoModal(false);
+    setNewTodoContent("");
+  };
+
   const onTodoUpdate = (id, data) => {
     api.updateTodoStatus(id, data).then((response) => {
       setTodos(response.data);
     });
-  }
+  };
   const onTodoDelete = (id, data) => {
     api.deleteTodo(id).then((response) => {
       setTodos(response.data);
     });
-  }
+  };
 
   return (
     <div className="App">
@@ -133,17 +136,21 @@ const App = () => {
       )}
 
       {/* Liste des todos */}
-      <ul className="todo-list">
-        {todos.map((todo) => (
-          <Todo
-            key={todo.id}
-            todo={todo}
-            onUpdate={onTodoUpdate}
-            onDelete={onTodoDelete}
-            onComplete={onTodoUpdate}
-          />
-        ))}
-      </ul>
+      {Array.isArray(todos) && todos.length > 0 ? (
+        <ul className="todo-list">
+          {todos.map((todo) => (
+            <Todo
+              key={todo.id}
+              todo={todo}
+              onUpdate={onTodoUpdate}
+              onDelete={onTodoDelete}
+              onComplete={onTodoUpdate}
+            />
+          ))}
+        </ul>
+      ) : (
+        <p>Pas de résultats.</p>
+      )}
     </div>
   );
 };
