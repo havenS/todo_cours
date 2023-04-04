@@ -7,6 +7,8 @@ import api from "./services/api";
 const App = () => {
   const [folders, setFolders] = useState([]);
   const [todos, setTodos] = useState([]);
+  const [selectedFolderId, setSelectedFolderId] = useState();
+
   const [search, setSearch] = useState("");
   const [showAddFolderModal, setShowAddFolderModal] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -15,39 +17,10 @@ const App = () => {
   const [newTodoContent, setNewTodoContent] = useState("");
   const [newTodoFolderId, setNewTodoFolderId] = useState("");
 
-  useEffect(() => {
-    api.fetchFolders().then((response) => {
-      setFolders(response.data);
-    });
-  }, []);
-
-  const handleFolderClick = (folderId) => {
-    api.fetchTodos(folderId).then((response) => {
-      setTodos(response.data);
-    });
-  };
-
-  const handleSearch = (e) => {
-    setSearch(e.target.value);
-  };
-
-  useEffect(() => {
-    if (search.trim() !== "") {
-      api.searchTodos(search).then((response) => {
-        setTodos(response.data);
-      });
-    } else {
-      api.fetchTodos().then((response) => {
-        setTodos(response.data);
-      });
-    }
-  }, [search]);
-
   const handleAddFolder = () => {
-    api.createFolder({ name: newFolderName }).then(() => {
-      api.fetchFolders().then((response) => {
-        setFolders(response.data);
-      });
+    api.createFolder({ name: newFolderName }).then((response) => {
+      // Rechargez la liste des dossiers après avoir créé un nouveau dossier
+      setFolders(response.data);
     });
     setNewFolderName("");
     setShowAddFolderModal(false);
@@ -55,7 +28,30 @@ const App = () => {
 
   const handleAddTodo = () => {
     setShowAddTodoModal(false);
+    api
+      .createTodo({ content: newTodoContent, folderId: newTodoFolderId })
+      .then(() => {
+        // Rechargez la liste des dossiers après avoir créé un nouveau dossier
+        api.fetchTodos(newTodoFolderId).then((response) => {
+          setTodos(response.data);
+        });
+      });
     setNewTodoContent("");
+    setNewTodoFolderId("");
+  };
+
+  const handleFolderClick = (folderId) => {
+    setSelectedFolderId(folderId);
+    api.fetchTodos(folderId).then((response) => {
+      setTodos(response.data);
+    });
+  };
+
+  const handleSearch = (e) => {
+    setSearch(e.target.value);
+    api.searchTodos(e.target.value).then((response) => {
+      setTodos(response.data);
+    });
   };
 
   const onTodoUpdate = (id, data) => {
@@ -63,94 +59,119 @@ const App = () => {
       setTodos(response.data);
     });
   };
+
   const onTodoDelete = (id, data) => {
     api.deleteTodo(id).then((response) => {
       setTodos(response.data);
     });
   };
+  
+  useEffect(() => {
+    api.searchTodos("").then((response) => {
+      setTodos(response.data);
+    });
+    api.fetchFolders().then((response) => {
+      setFolders(response.data);
+    });
+  }, []);
 
   return (
     <div className="App">
-      <button onClick={() => setShowAddFolderModal(true)}>
-        Ajouter un dossier
-      </button>
-      <input
-        type="text"
-        value={search}
-        onChange={handleSearch}
-        className="search-box"
-      />
-      <h2>Liste des dossiers</h2>
-      <ul className="folder-list">
-        {folders.map((folder) => (
-          <li key={folder.id} onClick={() => handleFolderClick(folder.id)}>
-            {folder.name}
-          </li>
-        ))}
-      </ul>
-
-      {/* Modale d'ajout de dossier */}
-      {showAddFolderModal && (
-        <div className="modal">
-          <h2>Ajouter un dossier</h2>
-          <input
-            type="text"
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            placeholder="Nom du dossier"
-          />
-          <button onClick={handleAddFolder}>Ajouter</button>
-          <button onClick={() => setShowAddFolderModal(false)}>Annuler</button>
-        </div>
-      )}
-
-      {/* Bouton pour afficher la modale d'ajout de todo */}
-      <button onClick={() => setShowAddTodoModal(true)}>
-        Ajouter une todo
-      </button>
-
-      {/* Modale d'ajout de todo */}
-      {showAddTodoModal && (
-        <div className="modal">
-          <h2>Ajouter une todo</h2>
-          <input
-            type="text"
-            value={newTodoContent}
-            onChange={(e) => setNewTodoContent(e.target.value)}
-            placeholder="Contenu de la todo"
-          />
-          <select
-            value={newTodoFolderId}
-            onChange={(e) => setNewTodoFolderId(e.target.value)}
-          >
-            <option value="">Sélectionner un dossier</option>
+      <div style={{ display: "flex" }}>
+        <div style={{ flex: 1 }}>
+          <h2>Liste des dossiers</h2>
+          <ul className="folder-list" style={{ listStyle: "initial" }}>
             {folders.map((folder) => (
-              <option key={folder.id} value={folder.id}>
+              <li
+                key={folder.id}
+                onClick={() => handleFolderClick(folder.id)}
+                className={folder.id === selectedFolderId ? "selected" : ""}
+              >
                 {folder.name}
-              </option>
+              </li>
             ))}
-          </select>
-          <button onClick={handleAddTodo}>Ajouter</button>
-          <button onClick={() => setShowAddTodoModal(false)}>Annuler</button>
-        </div>
-      )}
+          </ul>
 
-      {/* Liste des todos */}
-      {Array.isArray(todos) && todos.length > 0 ? (
-        <ul className="todo-list">
-          {todos.map((todo) => (
-            <Todo
-              key={todo.id}
-              todo={todo}
-              onUpdate={onTodoUpdate}
-              onDelete={onTodoDelete}
-              onComplete={onTodoUpdate}
-            />
-          ))}
-        </ul>
-      ) : (
-        <p>Pas de résultats.</p>
-      )}
+          {/* Modale d'ajout de dossier */}
+          {showAddFolderModal && (
+            <div className="modal">
+              <h2>Ajouter un dossier</h2>
+              <input
+                type="text"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Nom du dossier"
+              />
+              <button onClick={handleAddFolder}>Ajouter</button>
+              <button onClick={() => setShowAddFolderModal(false)}>
+                Annuler
+              </button>
+            </div>
+          )}
+          <button onClick={() => setShowAddFolderModal(true)}>
+            Ajouter un dossier
+          </button>
+        </div>
+
+        <div style={{ flex: 2 }}>
+          <h2>Liste des todos</h2>
+          <input
+            type="text"
+            value={search}
+            onChange={handleSearch}
+            className="search-box"
+          />
+          {/* Bouton pour afficher la modale d'ajout de todo */}
+          <button onClick={() => setShowAddTodoModal(true)}>
+            Ajouter une todo
+          </button>
+
+          {/* Modale d'ajout de todo */}
+          {showAddTodoModal && (
+            <div className="modal">
+              <h2>Ajouter une todo</h2>
+              <input
+                type="text"
+                value={newTodoContent}
+                onChange={(e) => setNewTodoContent(e.target.value)}
+                placeholder="Contenu de la todo"
+              />
+              <select
+                value={newTodoFolderId}
+                onChange={(e) => setNewTodoFolderId(e.target.value)}
+              >
+                <option value="">Sélectionner un dossier</option>
+                {folders.map((folder) => (
+                  <option key={folder.id} value={folder.id}>
+                    {folder.name}
+                  </option>
+                ))}
+              </select>
+              <button onClick={handleAddTodo}>Ajouter</button>
+              <button onClick={() => setShowAddTodoModal(false)}>
+                Annuler
+              </button>
+            </div>
+          )}
+
+          {/* Liste des todos */}
+          {Array.isArray(todos) && todos.length > 0 ? (
+            <ul className="todo-list">
+              {todos.map((todo) => (
+                <Todo
+                  key={todo.id}
+                  todo={todo}
+                  onUpdate={onTodoUpdate}
+                  onDelete={onTodoDelete}
+                  onComplete={onTodoUpdate}
+                />
+              ))}
+            </ul>
+          ) : (
+            <p>Pas de résultats.</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

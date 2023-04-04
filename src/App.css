@@ -11,14 +11,17 @@
 }
 
 .folder-list li {
-  display: inline-block;
   background-color: #007bff;
+  opacity: 0.7;
   color: white;
   padding: 5px 10px;
   margin-right: 10px;
   margin-bottom: 10px;
   cursor: pointer;
   border-radius: 3px;
+}
+.folder-list li.selected {
+  opacity: 1;
 }
 
 .folder-list li:hover {

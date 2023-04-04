@@ -17,6 +17,10 @@ export default {
     return apiClient.post('/folders', data);
   },
 
+  createTodo(data) {
+    return apiClient.post('/todos', data);
+  },
+
   fetchTodos(folderId) {
     return apiClient.get(`/folders/${folderId}/todos`);
   },
@@ -28,7 +32,7 @@ export default {
   updateTodoStatus(todoId, data) {
     return apiClient.patch(`/todos/${todoId}`, data);
   },
-  
+
   deleteTodo(todoId) {
     return apiClient.delete(`/todos/${todoId}`);
   }
